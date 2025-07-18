@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 export default function SuccessPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
-  const [verified, setVerified] = useState(false);
+  const [, setVerified] = useState(false);
 
   useEffect(() => {
     if (sessionId) {

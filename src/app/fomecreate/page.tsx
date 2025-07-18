@@ -1,17 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 
+interface Post {
+  id: string; 
+  title: string;
+  description: string;
+  user_id: string;
+  created_at: string | Date;
+}
+
+interface User {
+  id: string;
+  email?: string;
+}
+
 export default function FomeCreate() {
-  const router = useRouter();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [posts, setPosts] = useState<any[]>([]);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [user, setUser] = useState<any>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -19,7 +30,14 @@ export default function FomeCreate() {
     const fetchUser = async () => {
       const {
         data: { user },
+        error: userError,
       } = await supabase.auth.getUser();
+
+      if (userError) {
+        setError('Failed to get user.');
+        return;
+      }
+
       setUser(user);
       if (user) {
         fetchPosts(user.id);
@@ -30,18 +48,32 @@ export default function FomeCreate() {
   }, []);
 
   const fetchPosts = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('posts')
-      .select('*')
-      .eq('user_id', userId)
-      .order('id', { ascending: false });
-    if (data) {
-      setPosts(data);
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Fetch posts error:', error);
+        setError('Failed to fetch posts.');
+        return;
+      }
+
+      if (data) {
+        setPosts(data as Post[]); 
+      }
+    } catch (err) {
+      console.error('Unexpected fetchPosts error:', err);
+      setError('Unexpected error fetching posts.');
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
     if (!user) {
       setError('You must be logged in to post.');
       return;
@@ -49,26 +81,41 @@ export default function FomeCreate() {
 
     if (editingId !== null) {
       const post = posts.find((p) => p.id === editingId);
-      if (post?.user_id !== user.id) {
+      if (!post) {
+        setError('Post not found.');
+        return;
+      }
+      if (post.user_id !== user.id) {
         setError('You can only update your own posts.');
         return;
       }
 
-      await supabase
+      const { error: updateError } = await supabase
         .from('posts')
         .update({ title, description })
         .eq('id', editingId);
 
+      if (updateError) {
+        setError('Failed to update post.');
+        return;
+      }
+
       setEditingId(null);
     } else {
-      const newPost = {
+      const newPost: Post = {
         id: uuidv4(),
         title,
         description,
         user_id: user.id,
-        created_at: new Date(),
+        created_at: new Date().toISOString(),
       };
-      await supabase.from('posts').insert([newPost]);
+
+      const { error: insertError } = await supabase.from('posts').insert([newPost]);
+
+      if (insertError) {
+        setError('Failed to create post.');
+        return;
+      }
     }
 
     setTitle('');
@@ -76,7 +123,12 @@ export default function FomeCreate() {
     fetchPosts(user.id);
   };
 
-  const handleEdit = (post: any) => {
+  const handleEdit = (post: Post) => {
+    if (!user) {
+      setError('You must be logged in to edit posts.');
+      return;
+    }
+
     if (post.user_id !== user.id) {
       setError('You can only edit your own posts.');
       return;
@@ -85,16 +137,33 @@ export default function FomeCreate() {
     setTitle(post.title);
     setDescription(post.description);
     setEditingId(post.id);
+    setError('');
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
+    if (!user) {
+      setError('You must be logged in to delete posts.');
+      return;
+    }
+
     const post = posts.find((p) => p.id === id);
-    if (post?.user_id !== user.id) {
+    if (!post) {
+      setError('Post not found.');
+      return;
+    }
+
+    if (post.user_id !== user.id) {
       setError('You can only delete your own posts.');
       return;
     }
 
-    await supabase.from('posts').delete().eq('id', id);
+    const { error: deleteError } = await supabase.from('posts').delete().eq('id', id);
+
+    if (deleteError) {
+      setError('Failed to delete post.');
+      return;
+    }
+
     fetchPosts(user.id);
   };
 
@@ -117,12 +186,14 @@ export default function FomeCreate() {
           className="w-full p-2 border border-gray-300 rounded"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          required
         />
         <textarea
           placeholder="Description"
           className="w-full p-2 border border-gray-300 rounded"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          required
         />
         <button
           type="submit"

@@ -1,22 +1,31 @@
 'use client';
 
 import 'flowbite';
+import Image from 'next/image';
 
 export default function CarouselComponent() {
-  const slides = [1, 2, 3]; 
+  const slides = [1, 2, 3];
   return (
-    <div id="default-carousel" className="relative w-full max-w-6xl mx-auto mb-12" data-carousel="slide">
+    <div
+      id="default-carousel"
+      className="relative w-full max-w-6xl mx-auto mb-12"
+      data-carousel="slide"
+    >
       <div className="relative h-56 overflow-hidden rounded-xl md:h-96">
         {slides.map((n, index) => (
           <div
             key={index}
-            className={`duration-700 ease-in-out ${index === 0 ? 'block' : 'hidden'}`}
+            className={`duration-700 ease-in-out ${
+              index === 0 ? 'block' : 'hidden'
+            }`}
             data-carousel-item={index === 0 ? 'active' : ''}
           >
-            <img
-              src={`/slider/carousel-${n}.jpg`} 
-              className="absolute block w-full -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 object-cover"
+            <Image
+              src={`/slider/carousel-${n}.jpg`}
               alt={`Slide ${n}`}
+              fill
+              style={{ objectFit: 'cover', position: 'absolute' }}
+              priority={index === 0} 
             />
           </div>
         ))}
@@ -27,7 +36,9 @@ export default function CarouselComponent() {
           <button
             key={idx}
             type="button"
-            className={`w-3 h-3 rounded-full bg-white ${idx === 0 ? 'opacity-100' : 'opacity-50'}`}
+            className={`w-3 h-3 rounded-full bg-white ${
+              idx === 0 ? 'opacity-100' : 'opacity-50'
+            }`}
             aria-current={idx === 0 ? 'true' : 'false'}
             aria-label={`Slide ${idx + 1}`}
             data-carousel-slide-to={idx}

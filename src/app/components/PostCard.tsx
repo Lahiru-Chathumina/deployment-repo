@@ -1,26 +1,38 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
+import Link from 'next/link';
+import Image from 'next/image';
 
-export default function PostCard({ post }: any) {
+interface Post {
+  id: string | number;
+  title?: string;
+  description?: string;
+  image_url?: string;
+  user_email?: string;
+  created_at?: string | Date;
+}
+
+export default function PostCard({ post }: { post: Post }) {
   const preview = post?.description
     ? post.description.length > 100
       ? post.description.slice(0, 100) + '...'
       : post.description
-    : 'No description'
+    : 'No description';
 
-  const isPremiumUser = post.user_email?.endsWith('@premium.com')
+  const isPremiumUser = post.user_email?.endsWith('@premium.com');
 
   return (
     <Link href={`/post/${post.id}`} className="block">
       <article className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-200/60 hover:border-indigo-200 hover:-translate-y-1 cursor-pointer">
         {post.image_url && (
-          <div className="relative overflow-hidden">
-            <img
+          <div className="relative overflow-hidden h-48">
+            <Image
               src={post.image_url}
               alt={post.title || 'Post image'}
-              className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
+              fill
+              sizes="(max-width: 768px) 100vw, 700px"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              priority={false}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </div>
@@ -82,5 +94,5 @@ export default function PostCard({ post }: any) {
         </div>
       </article>
     </Link>
-  )
+  );
 }

@@ -1,79 +1,83 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
-import { Menu, X } from 'lucide-react'
-import { loadStripe } from '@stripe/stripe-js'
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
+import { Menu, X } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 export default function Navbar() {
-  const pathname = usePathname()
-  const router = useRouter()
-  const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [menuOpen, setMenuOpen] = useState(false)
+  const pathname = usePathname();
+  const router = useRouter();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUserEmail(user?.email ?? null)
-    }
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserEmail(user?.email ?? null);
+    };
 
-    fetchUser()
+    fetchUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserEmail(session?.user?.email ?? null)
-    })
+      setUserEmail(session?.user?.email ?? null);
+    });
 
     return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    setUserEmail(null)
-    router.push('/login')
-  }
+    await supabase.auth.signOut();
+    setUserEmail(null);
+    router.push('/login');
+  };
 
-const handlePayment = async () => {
-  if (!userEmail) {
-    router.push('/login')
-  } else {
+  const handlePayment = async () => {
+    if (!userEmail) {
+      router.push('/login');
+      return;
+    }
+
     try {
-      const stripe = await stripePromise
+      const stripe = await stripePromise;
       if (!stripe) {
-        alert('Stripe failed to load')
-        return
+        alert('Stripe failed to load');
+        return;
       }
 
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: userEmail }),
-      })
+      });
 
       if (!res.ok) {
-        const errorData = await res.json()
-        alert(`Error: ${errorData.error}`)
-        return
+        const errorData = await res.json();
+        alert(`Error: ${errorData.error}`);
+        return;
       }
 
-      const { sessionId } = await res.json()
+      const { sessionId } = await res.json();
 
-      const { error } = await stripe.redirectToCheckout({ sessionId })
+      const { error } = await stripe.redirectToCheckout({ sessionId });
 
       if (error) {
-        alert(error.message)
+        alert(error.message);
       }
-    } catch (error: any) {
-      alert(error.message || 'Payment failed')
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert('Payment failed');
+      }
     }
-  }
-}
-
+  };
 
   return (
     <nav className="bg-blue-800 shadow px-4 py-3 flex items-center justify-between md:px-8">
@@ -89,7 +93,10 @@ const handlePayment = async () => {
       </button>
 
       <div className="hidden md:flex items-center space-x-4">
-        <Link href="/" className={pathname === '/' ? 'text-indigo-300 font-semibold' : 'text-gray-300'}>
+        <Link
+          href="/"
+          className={pathname === '/' ? 'text-indigo-300 font-semibold' : 'text-gray-300'}
+        >
           Home
         </Link>
 
@@ -123,10 +130,16 @@ const handlePayment = async () => {
           </>
         ) : (
           <>
-            <Link href="/login" className={pathname === '/login' ? 'text-indigo-300 font-semibold' : 'text-gray-300'}>
+            <Link
+              href="/login"
+              className={pathname === '/login' ? 'text-indigo-300 font-semibold' : 'text-gray-300'}
+            >
               Login
             </Link>
-            <Link href="/register" className={pathname === '/register' ? 'text-indigo-300 font-semibold' : 'text-gray-300'}>
+            <Link
+              href="/register"
+              className={pathname === '/register' ? 'text-indigo-300 font-semibold' : 'text-gray-300'}
+            >
               Register
             </Link>
           </>
@@ -135,14 +148,18 @@ const handlePayment = async () => {
 
       {menuOpen && (
         <div className="absolute top-16 left-0 w-full bg-blue-900 shadow-md p-4 flex flex-col space-y-4 md:hidden z-50">
-          <Link href="/" onClick={() => setMenuOpen(false)} className={pathname === '/' ? 'text-indigo-300 font-semibold' : 'text-gray-300'}>
+          <Link
+            href="/"
+            onClick={() => setMenuOpen(false)}
+            className={pathname === '/' ? 'text-indigo-300 font-semibold' : 'text-gray-300'}
+          >
             Home
           </Link>
 
           <button
             onClick={() => {
-              setMenuOpen(false)
-              handlePayment()
+              setMenuOpen(false);
+              handlePayment();
             }}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-full shadow-md transition text-sm"
           >
@@ -166,8 +183,8 @@ const handlePayment = async () => {
               </span>
               <button
                 onClick={() => {
-                  setMenuOpen(false)
-                  handleLogout()
+                  setMenuOpen(false);
+                  handleLogout();
                 }}
                 className="text-red-400 hover:text-red-600 text-sm underline"
               >
@@ -176,10 +193,18 @@ const handlePayment = async () => {
             </>
           ) : (
             <>
-              <Link href="/login" onClick={() => setMenuOpen(false)} className={pathname === '/login' ? 'text-indigo-300 font-semibold' : 'text-gray-300'}>
+              <Link
+                href="/login"
+                onClick={() => setMenuOpen(false)}
+                className={pathname === '/login' ? 'text-indigo-300 font-semibold' : 'text-gray-300'}
+              >
                 Login
               </Link>
-              <Link href="/register" onClick={() => setMenuOpen(false)} className={pathname === '/register' ? 'text-indigo-300 font-semibold' : 'text-gray-300'}>
+              <Link
+                href="/register"
+                onClick={() => setMenuOpen(false)}
+                className={pathname === '/register' ? 'text-indigo-300 font-semibold' : 'text-gray-300'}
+              >
                 Register
               </Link>
               <span className="text-sm text-gray-400">Not logged in</span>
@@ -188,5 +213,5 @@ const handlePayment = async () => {
         </div>
       )}
     </nav>
-  )
+  );
 }

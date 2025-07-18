@@ -8,27 +8,36 @@ import Footer from './components/Footer';
 import { motion } from 'framer-motion';
 import { Sparkles, TrendingUp, Users, BookOpen } from 'lucide-react';
 
+type Post = {
+  id: string;
+  title: string;
+  content: string;
+  author_email: string;
+  created_at: string;
+};
+
 export default function HomePage() {
-  const [posts, setPosts] = useState<any[]>([]);
+
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchPosts = async () => {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .order('created_at', { ascending: false });
+useEffect(() => {
+  const fetchPosts = async () => {
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching posts:', error.message);
-      } else {
-        setPosts(data || []);
-      }
-      setLoading(false);
-    };
+    if (error) {
+      console.error('Error fetching posts:', error.message);
+    } else {
+      setPosts(data || []);
+    }
+    setLoading(false);
+  };
 
-    fetchPosts();
-  }, []);
+  fetchPosts();
+}, []);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
@@ -151,7 +160,7 @@ export default function HomePage() {
               >
                 {posts.map((post, index) => (
                   <motion.div
-                    key={post.id}
+                    key={post.id} 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}

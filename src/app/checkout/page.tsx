@@ -10,6 +10,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     const initiateCheckout = async () => {
       try {
+
         const res = await fetch('/api/create-checkout-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
