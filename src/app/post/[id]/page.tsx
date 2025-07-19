@@ -1,8 +1,13 @@
-
 import { supabase } from '@/app/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 
-export default async function PostDetailPage({ params }: { params: { id: string } }) {
+interface PageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default async function PostDetailPage({ params }: PageProps) {
   const { data: post, error } = await supabase
     .from('posts')
     .select('*')
