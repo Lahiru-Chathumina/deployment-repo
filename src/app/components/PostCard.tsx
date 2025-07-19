@@ -25,7 +25,7 @@ export default function PostCard({ post }: { post: Post }) {
     <Link href={`/post/${post.id}`} className="block">
       <article className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-200/60 hover:border-indigo-200 hover:-translate-y-1 cursor-pointer">
         {post.image_url && (
-          <div className="relative overflow-hidden h-48">
+          <div className="relative overflow-hidden h-52 sm:h-60">
             <Image
               src={post.image_url}
               alt={post.title || 'Post image'}
@@ -34,28 +34,28 @@ export default function PostCard({ post }: { post: Post }) {
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               priority={false}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </div>
         )}
 
         <div className="p-6">
-          <div className="flex items-center space-x-2 mb-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center relative">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center relative shadow">
               <span className="text-white text-sm font-semibold">
                 {(post.user_email || 'U').charAt(0).toUpperCase()}
               </span>
               {isPremiumUser && (
                 <span
                   title="Premium User"
-                  className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold text-white ring-2 ring-white"
                 >
                   ★
                 </span>
               )}
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-700">{post.user_email || 'Unknown User'}</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm font-medium text-gray-700">{post.user_email || 'Unknown User'}</p>
+              <p className="text-xs text-gray-400">
                 {post.created_at
                   ? new Date(post.created_at).toLocaleDateString('en-US', {
                       month: 'short',
@@ -67,14 +67,14 @@ export default function PostCard({ post }: { post: Post }) {
             </div>
           </div>
 
-          <h3 className="text-xl font-bold mb-3 text-slate-900 group-hover:text-indigo-700 transition-colors line-clamp-2">
+          <h3 className="text-2xl font-bold mb-2 text-gray-900 group-hover:text-indigo-700 transition-colors line-clamp-2">
             {post.title || 'Untitled Post'}
           </h3>
 
-          <p className="text-slate-600 leading-relaxed line-clamp-3 mb-4">{preview}</p>
+          <p className="text-gray-600 text-base leading-relaxed line-clamp-3 mb-5">{preview}</p>
 
           <div className="flex items-center justify-between">
-            <span className="inline-flex items-center text-sm font-medium text-indigo-600 group-hover:text-indigo-700">
+            <span className="inline-flex items-center text-sm font-semibold text-indigo-600 group-hover:text-indigo-700">
               Read more
               <svg
                 className="ml-1 w-4 h-4 transition-transform group-hover:translate-x-1"
@@ -85,10 +85,11 @@ export default function PostCard({ post }: { post: Post }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </span>
+
             <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-indigo-400 rounded-full"></div>
-              <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-              <div className="w-2 h-2 bg-pink-400 rounded-full"></div>
+              <div className="w-2 h-2 bg-indigo-400 rounded-full" />
+              <div className="w-2 h-2 bg-purple-400 rounded-full" />
+              <div className="w-2 h-2 bg-pink-400 rounded-full" />
             </div>
           </div>
         </div>
