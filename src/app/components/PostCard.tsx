@@ -74,7 +74,17 @@ export default function PostCard({ post }: { post: Post }) {
           <p className="text-gray-600 text-base leading-relaxed line-clamp-3 mb-5">{preview}</p>
 
           <div className="flex items-center justify-between">
-
+            <span className="inline-flex items-center text-sm font-semibold text-indigo-600 group-hover:text-indigo-700">
+              Read more
+              <svg
+                className="ml-1 w-4 h-4 transition-transform group-hover:translate-x-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
 
             <div className="flex items-center space-x-1">
               <div className="w-2 h-2 bg-indigo-400 rounded-full" />
