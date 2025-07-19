@@ -1,13 +1,16 @@
 import { supabase } from '@/app/lib/supabaseClient';
 import { notFound } from 'next/navigation';
+import { ReactElement } from 'react';
 
-interface PageProps {
-  params: {
-    id: string;
-  };
+interface Params {
+  id: string;
 }
 
-export default async function PostDetailPage({ params }: PageProps) {
+interface PageProps {
+  params: Params;
+}
+
+export default async function PostDetailPage({ params }: PageProps): Promise<ReactElement> {
   const { data: post, error } = await supabase
     .from('posts')
     .select('*')
@@ -15,7 +18,7 @@ export default async function PostDetailPage({ params }: PageProps) {
     .single();
 
   if (!post || error) {
-    notFound(); 
+    notFound();
   }
 
   return (
