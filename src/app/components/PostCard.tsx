@@ -20,6 +20,7 @@ export default function PostCard({ post }: { post: Post }) {
     : 'No description';
 
   const isPremiumUser = post.user_email?.endsWith('@premium.com');
+  console.log('Email:', post.user_email, 'Is Premium:', isPremiumUser);
 
   return (
     <Link href={`/post/${post.id}`} className="block">
@@ -42,12 +43,12 @@ export default function PostCard({ post }: { post: Post }) {
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center relative shadow">
               <span className="text-white text-sm font-semibold">
-                {(post.user_email || 'U').charAt(0).toUpperCase()}
+                {isPremiumUser ? `⭐ ${post.user_email?.split('@')[0]}` : (post.user_email || 'U').charAt(0).toUpperCase()}
               </span>
               {isPremiumUser && (
                 <span
                   title="Premium User"
-                  className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold text-white ring-2 ring-white"
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold text-white ring-2 ring-white"
                 >
                   ★
                 </span>
