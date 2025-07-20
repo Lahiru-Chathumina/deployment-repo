@@ -22,7 +22,6 @@ export default async function PostDetail({ params }: { params: { id: string } })
           {new Date(post.created_at).toLocaleDateString()}
         </p>
 
-        {/* ✅ Display image if exists */}
         {post.image_url && (
           <div className="mb-6">
             <Image
