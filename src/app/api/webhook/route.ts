@@ -1,16 +1,10 @@
-
 import Stripe from 'stripe';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-06-30.basil',
 });
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! 
-);
 
 export async function POST(req: NextRequest) {
   const signature = req.headers.get('stripe-signature') || '';
@@ -19,11 +13,7 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
+    event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch (err) {
     console.error('Webhook signature verification failed.', err);
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
@@ -32,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
 
-    const { error } = await supabase.from('payments').insert({
+    const { error } = await supabaseAdmin.from('payments').insert({
       email: session.customer_email,
       amount: session.amount_total,
       currency: session.currency,
