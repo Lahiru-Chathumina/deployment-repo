@@ -1,43 +1,21 @@
-import { supabase } from '@/app/lib/supabaseClient';
-import { notFound } from 'next/navigation';
-import Image from 'next/image';
+import { notFound } from 'next/navigation'
+import { createClient } from '@/app/utils/supabase/server'
 
-export default async function PostDetail({ params }: { params: { id: string } }) {
-  const { data: post, error } = await supabase
-    .from('posts')
-    .select('*')
-    .eq('id', params.id)
-    .single();
+export default async function Page({ params }: { params: { id: string } }) {
+  const supabase = createClient()
+  const { data: post } = await supabase.from('posts').select('*').eq('id', params.id).single()
 
-  if (error || !post) {
-    return notFound(); 
+  if (!post) {
+    notFound()
   }
 
   return (
-    <main className="min-h-screen bg-white px-6 py-12">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">{post.title}</h1>
-        <p className="text-sm text-gray-500 mb-6">
-          Posted by {post.author_email} on{' '}
-          {new Date(post.created_at).toLocaleDateString()}
-        </p>
-
-        {post.image_url && (
-          <div className="mb-6">
-            <Image
-              src={post.image_url}
-              alt={post.title}
-              width={800}
-              height={400}
-              className="rounded shadow-md w-full h-auto object-cover"
-            />
-          </div>
-        )}
-
-        <article className="prose prose-lg text-gray-800">
-          {post.content}
-        </article>
-      </div>
-    </main>
-  );
+    <div className="p-4 max-w-2xl mx-auto">
+      <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
+      <p className="text-gray-700">{post.description}</p>
+      {post.image_url && (
+        <img src={post.image_url} alt={post.title} className="mt-4 w-full rounded" />
+      )}
+    </div>
+  )
 }
