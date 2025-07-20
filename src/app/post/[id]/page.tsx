@@ -1,9 +1,14 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/app/utils/supabase/server'
 
-export default async function Page({ params }: { params: { id: string } }) {
+export default async function Page({
+  params
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const resolvedParams = await params
   const supabase = createClient()
-  const { data: post } = await supabase.from('posts').select('*').eq('id', params.id).single()
+  const { data: post } = await supabase.from('posts').select('*').eq('id', resolvedParams.id).single()
 
   if (!post) {
     notFound()
