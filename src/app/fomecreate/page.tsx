@@ -1,240 +1,307 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
-import { v4 as uuidv4 } from 'uuid';
+import { User } from '@supabase/supabase-js';
+import { Plus, Edit3, Trash2, Search, Upload, X, Check, Eye, CloudUpload } from 'lucide-react';
 
 interface Post {
-  id: string; 
-  title: string;
-  description: string;
+  id: number;
   user_id: string;
-  created_at: string | Date;
+  title?: string;
+  description: string;
+  image_url?: string | null;
+  user_email?: string;
+  created_at?: string;
 }
 
-interface User {
-  id: string;
-  email?: string;
-}
+export default function SimplePostManager() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const editingPostIdParam = searchParams.get('id');
 
-export default function FomeCreate() {
+  const [user, setUser] = useState<User | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [editingPostId, setEditingPostId] = useState<number | null>(
+    editingPostIdParam ? parseInt(editingPostIdParam) : null
+  );
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [error, setError] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [existingImage, setExistingImage] = useState<string | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError) {
-        setError('Failed to get user.');
-        return;
+    supabase.auth.getUser().then(({ data, error }) => {
+      if (error || !data?.user) {
+        router.push('/login');
+      } else {
+        setUser(data.user);
       }
+    });
+  }, [router]);
 
-      setUser(user);
-      if (user) {
-        fetchPosts(user.id);
-      }
-    };
-
-    fetchUser();
-  }, []);
-
-  const fetchPosts = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
+  useEffect(() => {
+    if (!user) return;
+    const fetch = async () => {
+      let query = supabase
         .from('posts')
         .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Fetch posts error:', error);
-        setError('Failed to fetch posts.');
-        return;
+        .eq('user_id', user.id)
+        .order('id', { ascending: false });
+      if (searchTerm.trim()) {
+        query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
       }
+      const { data, error } = await query;
+      if (error) setError(error.message);
+      else setPosts(data || []);
+    };
+    fetch();
+  }, [user, searchTerm]);
 
-      if (data) {
-        setPosts(data as Post[]); 
-      }
-    } catch (err) {
-      console.error('Unexpected fetchPosts error:', err);
-      setError('Unexpected error fetching posts.');
+  useEffect(() => {
+    if (!editingPostId) {
+      setTitle('');
+      setDescription('');
+      setExistingImage(null);
+      setImagePreview(null);
+      setError('');
+      return;
     }
-  };
+
+    supabase
+      .from('posts')
+      .select('*')
+      .eq('id', editingPostId)
+      .single()
+      .then(({ data, error }) => {
+        if (error || !data) {
+          setError('Post not found');
+          setEditingPostId(null);
+          return;
+        }
+        if (user && data.user_id !== user.id) {
+          setError('Not authorized to edit this post');
+          setEditingPostId(null);
+          return;
+        }
+        setTitle(data.title || '');
+        setDescription(data.description);
+        setExistingImage(data.image_url);
+        setImagePreview(data.image_url);
+        setError('');
+      });
+  }, [editingPostId, user]);
+
+  useEffect(() => {
+    if (!imageFile) return;
+    const url = URL.createObjectURL(imageFile);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return setError('User not found');
+
+    setLoading(true);
     setError('');
+    setSuccess('');
 
-    if (!user) {
-      setError('You must be logged in to post.');
-      return;
-    }
+    try {
+      let image_url = existingImage;
 
-    if (editingId !== null) {
-      const post = posts.find((p) => p.id === editingId);
-      if (!post) {
-        setError('Post not found.');
-        return;
-      }
-      if (post.user_id !== user.id) {
-        setError('You can only update your own posts.');
-        return;
+      if (imageFile) {
+        const ext = imageFile.name.split('.').pop();
+        const filename = `${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from('postimage').upload(filename, imageFile);
+        if (uploadError) throw new Error('Image upload failed');
+
+        const { data: urlData } = supabase.storage.from('postimage').getPublicUrl(filename);
+        image_url = urlData?.publicUrl || null;
       }
 
-      const { error: updateError } = await supabase
+      if (editingPostId) {
+        const { error: updateError } = await supabase
+          .from('posts')
+          .update({ title, description, image_url })
+          .eq('id', editingPostId);
+
+        if (updateError) throw new Error(updateError.message);
+        setSuccess('Post updated successfully!');
+      } else {
+        const { error: insertError } = await supabase.from('posts').insert([
+          {
+            user_id: user.id,
+            user_email: user.email,
+            title,
+            description,
+            image_url,
+          },
+        ]);
+        if (insertError) throw new Error(insertError.message);
+        setSuccess('Post created successfully!');
+      }
+
+      setTitle('');
+      setDescription('');
+      setImageFile(null);
+      setImagePreview(null);
+      setExistingImage(null);
+      setEditingPostId(null);
+
+      const { data, error } = await supabase
         .from('posts')
-        .update({ title, description })
-        .eq('id', editingId);
-
-      if (updateError) {
-        setError('Failed to update post.');
-        return;
-      }
-
-      setEditingId(null);
-    } else {
-      const newPost: Post = {
-        id: uuidv4(),
-        title,
-        description,
-        user_id: user.id,
-        created_at: new Date().toISOString(),
-      };
-
-      const { error: insertError } = await supabase.from('posts').insert([newPost]);
-
-      if (insertError) {
-        setError('Failed to create post.');
-        return;
-      }
+        .select('*')
+        .eq('user_id', user.id)
+        .order('id', { ascending: false });
+      if (!error) setPosts(data || []);
+    } catch (err: any) {
+      setError(err.message || 'Unknown error');
+    } finally {
+      setLoading(false);
     }
-
-    setTitle('');
-    setDescription('');
-    fetchPosts(user.id);
   };
 
-  const handleEdit = (post: Post) => {
-    if (!user) {
-      setError('You must be logged in to edit posts.');
-      return;
-    }
+  const handleDelete = async () => {
+    if (!editingPostId) return;
+    if (!confirm('Are you sure to delete this post?')) return;
 
-    if (post.user_id !== user.id) {
-      setError('You can only edit your own posts.');
-      return;
-    }
-
-    setTitle(post.title);
-    setDescription(post.description);
-    setEditingId(post.id);
+    setLoading(true);
     setError('');
+    setSuccess('');
+
+    try {
+      const { error: deleteError } = await supabase.from('posts').delete().eq('id', editingPostId);
+      if (deleteError) throw new Error(deleteError.message);
+
+      setSuccess('Post deleted successfully!');
+      setEditingPostId(null);
+      setTitle('');
+      setDescription('');
+      setImageFile(null);
+      setImagePreview(null);
+      setExistingImage(null);
+
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('id', { ascending: false });
+      if (!error) setPosts(data || []);
+    } catch (err: any) {
+      setError(err.message || 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const handleDelete = async (id: string) => {
-    if (!user) {
-      setError('You must be logged in to delete posts.');
-      return;
-    }
-
-    const post = posts.find((p) => p.id === id);
-    if (!post) {
-      setError('Post not found.');
-      return;
-    }
-
-    if (post.user_id !== user.id) {
-      setError('You can only delete your own posts.');
-      return;
-    }
-
-    const { error: deleteError } = await supabase.from('posts').delete().eq('id', id);
-
-    if (deleteError) {
-      setError('Failed to delete post.');
-      return;
-    }
-
-    fetchPosts(user.id);
-  };
-
-  const filteredPosts = posts.filter((post) =>
-    post.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
-    <div className="max-w-3xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-lg">
-      <h1 className="text-2xl font-bold mb-4">
-        {editingId ? 'Update Post' : 'Create New Post'}
-      </h1>
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow mt-10">
+      <h1 className="text-3xl font-bold mb-6 text-center">Simple Post Manager</h1>
 
-      {error && <p className="text-red-600 mb-4">{error}</p>}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="mb-4">
         <input
-          type="text"
-          placeholder="Title"
-          className="w-full p-2 border border-gray-300 rounded"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
+          type="search"
+          placeholder="Search posts..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-2 border rounded-md"
         />
-        <textarea
-          placeholder="Description"
-          className="w-full p-2 border border-gray-300 rounded"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-        />
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          {editingId ? 'Update Post' : 'Create Post'}
-        </button>
-      </form>
+      </div>
 
-      <input
-        type="text"
-        placeholder="Search your posts..."
-        className="w-full p-2 mt-6 mb-4 border border-gray-300 rounded"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="border p-4 rounded-md max-h-[400px] overflow-y-auto">
+          {posts.length === 0 && <p className="text-gray-500">No posts found</p>}
+          {posts.map(post => (
+            <div
+              key={post.id}
+              onClick={() => setEditingPostId(post.id)}
+              className={`cursor-pointer p-3 mb-3 rounded border ${
+                editingPostId === post.id ? 'bg-indigo-100 border-indigo-400' : 'hover:bg-gray-100'
+              }`}
+            >
+              <h3 className="font-semibold">{post.title || '(No Title)'}</h3>
+              <p className="text-sm text-gray-600 truncate">{post.description}</p>
+            </div>
+          ))}
+        </div>
 
-      <div className="space-y-4">
-        {filteredPosts.map((post) => (
-          <div
-            key={post.id}
-            className="border border-gray-200 rounded-lg p-4 shadow-sm"
-          >
-            <h2 className="text-xl font-semibold">{post.title}</h2>
-            <p className="text-gray-600">{post.description}</p>
-            <div className="mt-2 space-x-2">
+        <form onSubmit={handleSubmit} className="space-y-4 border p-4 rounded-md shadow-sm">
+          <div>
+            <label className="block mb-1 font-semibold">Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              required
+              className="w-full px-3 py-2 border rounded"
+              placeholder="Post title"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1 font-semibold">Description</label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={4}
+              required
+              className="w-full px-3 py-2 border rounded resize-none"
+              placeholder="Post description"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1 font-semibold">Image {editingPostId ? '(optional)' : '(required)'}</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={e => setImageFile(e.target.files?.[0] ?? null)}
+              required={!editingPostId}
+            />
+          </div>
+
+          {imagePreview && (
+            <div>
+              <label className="block mb-1 font-semibold flex items-center gap-1">
+                <Eye className="w-4 h-4" /> Preview
+              </label>
+              <img src={imagePreview} alt="preview" className="w-full max-h-48 object-cover rounded" />
+            </div>
+          )}
+
+          {error && <p className="text-red-600">{error}</p>}
+          {success && <p className="text-green-600">{success}</p>}
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400"
+            >
+              {loading ? (editingPostId ? 'Updating...' : 'Creating...') : editingPostId ? 'Update' : 'Create'}
+            </button>
+
+            {editingPostId && (
               <button
-                onClick={() => handleEdit(post)}
-                className="text-blue-600 hover:underline"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => handleDelete(post.id)}
-                className="text-red-600 hover:underline"
+                type="button"
+                disabled={loading}
+                onClick={handleDelete}
+                className="py-2 px-4 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400"
               >
                 Delete
               </button>
-            </div>
+            )}
           </div>
-        ))}
+        </form>
       </div>
     </div>
   );

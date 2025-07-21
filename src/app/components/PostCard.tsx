@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
 interface Post {
   id: string | number;
@@ -19,8 +20,30 @@ export default function PostCard({ post }: { post: Post }) {
       : post.description
     : 'No description';
 
-  const isPremiumUser = post.user_email?.endsWith('@premium.com');
-  console.log('Email:', post.user_email, 'Is Premium:', isPremiumUser);
+  const [isPremiumUser, setIsPremiumUser] = useState(false);
+
+  useEffect(() => {
+    async function fetchPremiumStatus() {
+      try {
+        if (!post.user_email) return;
+
+        const res = await fetch(`/api/checkPremium?email=${post.user_email}`);
+
+        if (!res.ok) {
+          throw new Error(`Request failed with status ${res.status}`);
+        }
+
+        const data = await res.json();
+        console.log('Premium status:', data.isPremium);
+        setIsPremiumUser(data.isPremium);
+      } catch (err) {
+        console.error('Failed to fetch premium status:', err);
+        setIsPremiumUser(false);
+      }
+    }
+
+    fetchPremiumStatus();
+  }, [post.user_email]); 
 
   return (
     <Link href={`/post/${post.id}`} className="block">
@@ -43,7 +66,9 @@ export default function PostCard({ post }: { post: Post }) {
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center relative shadow">
               <span className="text-white text-sm font-semibold">
-                {isPremiumUser ? `⭐ ${post.user_email?.split('@')[0]}` : (post.user_email || 'U').charAt(0).toUpperCase()}
+                {isPremiumUser
+                  ? `⭐ ${post.user_email?.split('@')[0]}`
+                  : (post.user_email || 'U').charAt(0).toUpperCase()}
               </span>
               {isPremiumUser && (
                 <span

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 import withFlowbiteReact from "flowbite-react/plugin/nextjs";
 
-const nextConfig: NextConfig = {
+const nextConfig: NextConfig = { 
   reactStrictMode: true,  
   env: {
     SUPABASE_URL: process.env.SUPABASE_URL,

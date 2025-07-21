@@ -20,10 +20,25 @@ export default function SuccessPageClient() {
     const fetchSession = async () => {
       if (!sessionId) return;
       try {
-        const res = await fetch(`/api/get-session-details?session_id=${sessionId}`);
-        if (!res.ok) throw new Error('Failed to fetch session');
-        const data: Session = await res.json();
-        setSession(data);
+        const res = await fetch('api/stripe/confirm', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ session_id: sessionId }),
+        });
+
+        if (!res.ok) throw new Error('Failed to confirm payment');
+
+        const data = await res.json();
+        console.log('Payment confirmation response:', data);
+
+        setSession({
+          amount: data.payment.amount,
+          currency: data.payment.currency,
+          customer_email: data.payment.email,
+          created_at: data.payment.created_at,
+        });
       } catch (error) {
         console.error('Error fetching session:', error);
         setSession(null);
@@ -33,7 +48,7 @@ export default function SuccessPageClient() {
   }, [sessionId]);
 
   const downloadReceipt = () => {
-    alert('Receipt downloaded!');
+    alert('Receipt downloaded!'); 
   };
 
   const onBackToHome = () => {
@@ -87,10 +102,7 @@ export default function SuccessPageClient() {
                   <span className="text-gray-500">Date:</span>
                   <span className="font-semibold">{formattedDate}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Session ID:</span>
-                  <span className="font-mono text-xs break-all">{sessionId}</span>
-                </div>
+              
               </div>
             </div>
           )}
