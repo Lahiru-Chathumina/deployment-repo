@@ -26,7 +26,8 @@ export async function GET(req: Request) {
 
     const isPremium = data && data.length > 0;
     return NextResponse.json({ isPremium });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

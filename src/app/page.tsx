@@ -75,7 +75,6 @@ useEffect(() => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.3 }}
             >
-              Discover amazing stories, share your thoughts, and connect with a vibrant community of writers and readers.
             </motion.p>
 
             <motion.div 
