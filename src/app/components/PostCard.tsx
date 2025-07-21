@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { Calendar, ArrowRight, Star } from 'lucide-react';
 
 interface Post {
   id: string | number;
@@ -14,108 +15,112 @@ interface Post {
 }
 
 export default function PostCard({ post }: { post: Post }) {
-  const preview = post?.description
-    ? post.description.length > 100
-      ? post.description.slice(0, 100) + '...'
-      : post.description
-    : 'No description';
-
   const [isPremiumUser, setIsPremiumUser] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const preview =
+    post?.description && post.description.length > 150
+      ? post.description.slice(0, 150) + '...'
+      : post?.description || 'No description available';
+
+  const getUserInitials = (email?: string) => {
+    if (!email) return 'U';
+    return email.split('@')[0].slice(0, 2).toUpperCase();
+  };
+
+  const formatDate = (date?: string | Date) => {
+    if (!date) return 'Unknown Date';
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
 
   useEffect(() => {
     async function fetchPremiumStatus() {
+      if (!post.user_email) return;
+      setIsLoading(true);
+
       try {
-        if (!post.user_email) return;
-
-        const res = await fetch(`/api/checkPremium?email=${post.user_email}`);
-
-        if (!res.ok) {
-          throw new Error(`Request failed with status ${res.status}`);
-        }
-
+        const res = await fetch(`/api/checkPremium?email=${encodeURIComponent(post.user_email)}`);
+        if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
         const data = await res.json();
-        console.log('Premium status:', data.isPremium);
-        setIsPremiumUser(data.isPremium);
+        setIsPremiumUser(data.isPremium || false);
       } catch (err) {
         console.error('Failed to fetch premium status:', err);
         setIsPremiumUser(false);
+      } finally {
+        setIsLoading(false);
       }
     }
 
     fetchPremiumStatus();
-  }, [post.user_email]); 
+  }, [post.user_email]);
 
   return (
-    <Link href={`/post/${post.id}`} className="block">
-      <article className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-200/60 hover:border-indigo-200 hover:-translate-y-1 cursor-pointer">
+    <Link href={`/post/${post.id}`} className="block group">
+      <article className="bg-white rounded-2xl border border-gray-100 shadow hover:shadow-lg transition-all duration-300 overflow-hidden hover:-translate-y-1">
         {post.image_url && (
-          <div className="relative overflow-hidden h-52 sm:h-60">
+          <div className="relative h-52 sm:h-60 md:h-48 lg:h-56 xl:h-60 bg-gray-100 overflow-hidden">
             <Image
               src={post.image_url}
               alt={post.title || 'Post image'}
               fill
-              sizes="(max-width: 768px) 100vw, 700px"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-              priority={false}
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              sizes="(max-width: 768px) 100vw, 50vw"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent group-hover:opacity-100 opacity-0 transition-opacity duration-300" />
+            {isPremiumUser && (
+              <div className="absolute top-3 right-3 bg-yellow-400 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-md">
+                <Star className="w-3.5 h-3.5 fill-white" />
+                Premium
+              </div>
+            )}
           </div>
         )}
 
-        <div className="p-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center relative shadow">
-              <span className="text-white text-sm font-semibold">
-                {isPremiumUser
-                  ? `⭐ ${post.user_email?.split('@')[0]}`
-                  : (post.user_email || 'U').charAt(0).toUpperCase()}
-              </span>
+        <div className="p-5 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow">
+                {getUserInitials(post.user_email)}
+              </div>
+              {isLoading && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gray-300 rounded-full animate-pulse border border-white" />
+              )}
               {isPremiumUser && (
-                <span
-                  title="Premium User"
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold text-white ring-2 ring-white"
-                >
-                  ★
-                </span>
+                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-yellow-400 flex items-center justify-center border-2 border-white">
+                  <Star className="w-2.5 h-2.5 text-white fill-current" />
+                </div>
               )}
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700">{post.user_email || 'Unknown User'}</p>
-              <p className="text-xs text-gray-400">
-                {post.created_at
-                  ? new Date(post.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
-                  : 'Unknown Date'}
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-800 truncate">
+                {post.user_email?.split('@')[0] || 'Unknown'}
               </p>
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <Calendar className="w-3 h-3" />
+                {formatDate(post.created_at)}
+              </div>
             </div>
           </div>
 
-          <h3 className="text-2xl font-bold mb-2 text-gray-900 group-hover:text-indigo-700 transition-colors line-clamp-2">
+          <h2 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors line-clamp-2">
             {post.title || 'Untitled Post'}
-          </h3>
+          </h2>
 
-          <p className="text-gray-600 text-base leading-relaxed line-clamp-3 mb-5">{preview}</p>
+          <p className="text-sm text-gray-600 line-clamp-3">{preview}</p>
 
-          <div className="flex items-center justify-between">
-            <span className="inline-flex items-center text-sm font-semibold text-indigo-600 group-hover:text-indigo-700">
+          <div className="flex justify-between items-center pt-2">
+            <span className="flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors">
               Read more
-              <svg
-                className="ml-1 w-4 h-4 transition-transform group-hover:translate-x-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
             </span>
-
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-indigo-400 rounded-full" />
-              <div className="w-2 h-2 bg-purple-400 rounded-full" />
-              <div className="w-2 h-2 bg-pink-400 rounded-full" />
+            <div className="flex gap-1.5">
+              <div className="w-2 h-2 bg-indigo-500 rounded-full" />
+              <div className="w-2 h-2 bg-purple-500 rounded-full" />
+              <div className="w-2 h-2 bg-pink-500 rounded-full" />
             </div>
           </div>
         </div>
