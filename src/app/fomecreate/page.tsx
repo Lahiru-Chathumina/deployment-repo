@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
-import { Plus, Edit3, Trash2, Search, Upload, X, Check, Eye, CloudUpload } from 'lucide-react';
+import { Eye } from 'lucide-react'; 
+import Image from 'next/image'; 
 
 interface Post {
   id: number;
@@ -163,8 +164,12 @@ export default function SimplePostManager() {
         .eq('user_id', user.id)
         .order('id', { ascending: false });
       if (!error) setPosts(data || []);
-    } catch (err: any) {
-      setError(err.message || 'Unknown error');
+    } catch (err: unknown) { 
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Unknown error');
+      }
     } finally {
       setLoading(false);
     }
@@ -196,8 +201,12 @@ export default function SimplePostManager() {
         .eq('user_id', user?.id)
         .order('id', { ascending: false });
       if (!error) setPosts(data || []);
-    } catch (err: any) {
-      setError(err.message || 'Unknown error');
+    } catch (err: unknown) { 
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Unknown error');
+      }
     } finally {
       setLoading(false);
     }
@@ -274,7 +283,15 @@ export default function SimplePostManager() {
               <label className="block mb-1 font-semibold flex items-center gap-1">
                 <Eye className="w-4 h-4" /> Preview
               </label>
-              <img src={imagePreview} alt="preview" className="w-full max-h-48 object-cover rounded" />
+              <div className="w-full h-48 relative">
+                <Image
+                  src={imagePreview}
+                  alt="preview"
+                  fill
+                  className="rounded object-cover"
+                  unoptimized 
+                />
+              </div>
             </div>
           )}
 
